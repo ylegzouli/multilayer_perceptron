@@ -6,7 +6,7 @@ NB_INPUT = 3
 NB_HIDDEN = [3, 3]
 NB_OUTPUT = 2
 EPOCH = 50
-LR = 0.1
+LR = 0.01
 
 #%%
 
@@ -40,6 +40,9 @@ class MLP(BaseEstimator, TransformerMixin):
             g = np.zeros((layers[i], layers[i+1]))
             grad.append(g)
         self.grad = grad
+
+
+
 
     # create preactivation fonction (multipication between weight and input)
     def __pre_activation(self, input, weights):
@@ -89,7 +92,7 @@ class MLP(BaseEstimator, TransformerMixin):
             weights += derivatives * learningRate
     
     # Score fonction
-    def __mse(self, target, output):
+    def score(self, target, output):
         return np.average((target - output) ** 2)
 
     def fit(self, X, y):
@@ -105,7 +108,7 @@ class MLP(BaseEstimator, TransformerMixin):
                 # perform gradient descent to update the weights
                 self.__gradient_descent(self.learning_rate)
                 # keep track of the MSE for reporting later
-                sum_errors += self.__mse(target, output)
+                sum_errors += self.score(target, output)
             # Epoch complete, report the training error
             print("Error: {} at epoch {}".format(sum_errors / len(X), i+1))
         print('Training complete')
