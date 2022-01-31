@@ -1,0 +1,31 @@
+
+https://www.kaggle.com/vitorgamalemos/multilayer-perceptron-from-scratch
+
+feedforward -> https://en.wikipedia.org/wiki/Feedforward_neural_network
+
+backpropagation
+
+https://github.com/MrtnsK/multilayer-perceptron/blob/master/mlp.py
+
+https://kaifabi.github.io/2020/01/15/numpy_mlp.html
+
+-> 2 Easy Ways to Normalize data
+https://www.journaldev.com/45109/normalize-data-in-python
+
+
+Step 1: Initialize the weights and bias with small-randomized values; [OK]
+
+Step 2: Propagate all values in the input layer until output layer(Forward Propagation) [OK]
+
+Step 3: Update weight and bias in the inner layers(Backpropagation) []
+
+Step 4: Do it until that the stop criterion is satisfied ! []
+
+
+simple MLP implementation 
+    -> https://www.youtube.com/watch?v=0oWnheK-gGk
+    -> https://www.youtube.com/watch?v=ScL18goxsSg
+    -> https://www.youtube.com/watch?v=Z97XGNUUx9o
+
+
+https://github.com/musikalkemist/DeepLearningForAudioWithPython/blob/master/8-%20Training%20a%20neural%20network:%20Implementing%20back%20propagation%20from%20scratch/code/mlp.py
