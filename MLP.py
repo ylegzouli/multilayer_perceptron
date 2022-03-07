@@ -1,146 +1,146 @@
 #%%
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
+import pandas as pd
+import plotly.graph_objects as go
+from utils import split_train_test
 
-NB_INPUT = 3
-NB_HIDDEN = [3, 3]
-NB_OUTPUT = 2
-EPOCH = 50
-LR = 0.01
+fig = go.Figure()
 
 #%%
 
 class MLP(BaseEstimator, TransformerMixin):
-    
-    def __init__(self, nb_inputs=NB_INPUT, nb_hidden=NB_HIDDEN, nb_outputs=NB_OUTPUT, 
-                epochs=EPOCH, learning_rate=LR):
-        # set NN parameters
-        self.nb_inputs = nb_inputs
-        self.nb_hidden = nb_hidden
-        self.nb_outputs = nb_outputs
-        self.epochs = epochs
-        self.learning_rate=learning_rate
-        # create list of layers
-        layers = [self.nb_inputs] + self.nb_hidden + [self.nb_outputs]
-        # init tab of random weights
-        weights = []
-        for i in range(len(layers) - 1):
-            w = np.random.rand(layers[i], layers[i+1])
-            weights.append(w)
-        self.weights = weights
-        # init tab of activations
-        activations = []
-        for i in range(len(layers)):
-            a = np.zeros(layers[i])
-            activations.append(a)
-        self.activations = activations
-        # init tab of gradients
-        grad = []
-        for i in range(len(layers) - 1):
-            g = np.zeros((layers[i], layers[i+1]))
-            grad.append(g)
-        self.grad = grad
-
-
-
-
-    # create preactivation fonction (multipication between weight and input)
-    def __pre_activation(self, input, weights):
-        return np.dot(input, weights)
+    def __init__(self):
+        nb_inputs = 30
+        nb_hidden = 3
+        nb_outputs = 1
+        np.random.seed(42)
+        weight_1 = np.random.randn(nb_hidden, nb_inputs) * 0.01
+        weight_2 = np.random.randn(nb_outputs, nb_hidden) * 0.01
+        bias_1 = np.zeros((nb_hidden, 1))
+        bias_2 = np.zeros((nb_outputs, 1))
+        self.weights = []
+        self.weights.append(weight_1)
+        self.weights.append(weight_2)
+        self.weights.append(bias_1)
+        self.weights.append(bias_2)
 
     # Create all activation/gradient fontion we need
-    def __sigmoid_activation(self, z):
-        return 1.0 / (1.0 + np.exp(-z))
+    def __softmax(self, z):
+        return (np.exp(z) / np.sum(np.exp(z) + 1e-6, axis=0, keepdims=True))
 
-    def __sigmoid_gradient(self, X):
-        return X * (1.0 - X)
+    def __relu(sefl, z):
+        return np.maximum(z, 0)
 
-    def __forward_propagate(self, X):
-        y = X
-        self.activations[0] = y
-        for i, w in enumerate(self.weights):
-            # print (y.shape, w.shape)
-            # calculate net input
-            z = self.__pre_activation(y, w)
-            # calculate activation
-            y = self.__sigmoid_activation(z)
-            self.activations[i + 1] = y
-        return y
+    def __relu_gradient(self, d_output, z):
+        dz = np.array(d_output, copy=True)
+        dz[z <= 0] = 0
+        return dz
 
-    def __back_propagate(self, error):
-        # iterate backwards through the network layers
-        for i in reversed(range(len(self.grad))):
-            # get activation for previous layer
-            activations = self.activations[i + 1]
-            # apply sigmoid derivative function
-            delta = error * self.__sigmoid_gradient(activations)
-            # reshape delta to have it as a 2d array
-            delta_re = delta.reshape(delta.shape[0], -1).T
-            # get activations for current layer
-            current_activations = self.activations[i]
-            # reshape activations as to have them as a 2d column matrix
-            current_activations = current_activations.reshape(current_activations.shape[0],-1)
-            # save derivative after applying matrix multiplication
-            self.grad[i] = np.dot(current_activations, delta_re)
-            # backpropogate the next error
-            error = np.dot(delta, self.weights[i].T)
+    # def __sigmoid(self, z):
+        # return 1.0 / (1.0 + np.exp(-z))
 
-    def __gradient_descent(self, learningRate):
-        for i in range(len(self.weights)):
-            weights = self.weights[i]
-            derivatives = self.grad[i]
-            weights += derivatives * learningRate
-    
-    # Score fonction
-    def score(self, target, output):
-        return np.average((target - output) ** 2)
+    # def __sigmoid_gradient(self, X, dA):
+        # return dA * X * (1.0 - X)
+
+    def __forward_propagate(self, X, weight, bias, func):
+        z = np.dot(weight, X) + bias
+        if func == 'softmax':
+            A = self.__softmax(z)
+        elif func == 'relu':
+            A = self.__relu(z)
+        save = (X, weight, bias, z)
+        return A, save
+
+    def __back_propagate(self, d_output, output, y, save, func):
+        A, weight, _, z = save
+        m = A.shape[1]
+        if func == 'softmax':
+            error = output - y
+        elif func == 'relu':
+            error = self.__relu_gradient(d_output, z)
+        d_weight = (1 / m) * np.dot(error, A.T)
+        d_bias = (1 / m) * np.sum(error, axis=1, keepdims=True)
+        dA = np.dot(weight.T, error)
+        return dA, d_weight, d_bias
+
+    def __gradient_descent(self, d_weight_1, d_bias_1, d_weight_2, d_bias_2, learning_rate):
+        self.weights[0] -= learning_rate * d_weight_1
+        self.weights[2] -= learning_rate * d_bias_1
+        self.weights[1] -= learning_rate * d_weight_2
+        self.weights[3] -= learning_rate * d_bias_2
+
+    def __cost(self, y, Y):
+        m = Y.shape[1]
+        cost = (-1 / m) * np.sum(Y * np.log(y + 1e-6) + (1 - Y) * np.log(1 - y + 1e-6), keepdims=True, axis=1)
+        cost = np.squeeze(cost)
+        return cost
 
     def fit(self, X, y):
-        for i in range(self.epochs):
-            sum_errors = 0
-            # iterate through all the training data
-            for j, x in enumerate(X):
-                target = y[j]
-                # activate the network
-                output = self.__forward_propagate(x)
-                error = target - output
-                self.__back_propagate(error)
-                # perform gradient descent to update the weights
-                self.__gradient_descent(self.learning_rate)
-                # keep track of the MSE for reporting later
-                sum_errors += self.score(target, output)
-            # Epoch complete, report the training error
-            print("Error: {} at epoch {}".format(sum_errors / len(X), i+1))
+        epochs = 1000
+        learning_rate = 0.01
+        cost_save = []
+        X, X_test, y, y_test = split_train_test(X, y)
+        for i in range(epochs):
+            # activate the network
+            temp, save1 = self.__forward_propagate(X, self.weights[0], self.weights[2], 'relu')
+            output, save2 = self.__forward_propagate(temp, self.weights[1], self.weights[3], 'softmax')
+            # activate the network on test data
+            temp, _ = self.__forward_propagate(X_test, self.weights[0], self.weights[2], 'relu')
+            output_test, _ = self.__forward_propagate(temp, self.weights[1], self.weights[3], 'softmax')
+            # compute cost
+            loss = self.__cost(output, y)
+            val_loss = self.__cost(output_test, y_test)
+            # Compute backward propagation
+            d_output = -(np.divide(y, output + 1e-6) - np.divide(1 - y, 1 - output + 1e-6))
+            d_output, d_weight_2, d_bias_2 = self.__back_propagate(d_output, output, y, save2, 'softmax')
+            _, d_weight_1, d_bias_1 = self.__back_propagate(d_output, output, y, save1, 'relu')
+            # perform gradient descent to update the weights
+            self.__gradient_descent(d_weight_1, d_bias_1, d_weight_2, d_bias_2, learning_rate)
+            # Report the training error
+            cost_save.append(loss)
+            if (i % 50) == 0:
+                print('loss: {} - val_loss: {}'.format(loss, val_loss))
+        error = pd.Series(cost_save)
+        fig.add_trace(go.Scatter(y=error, x=error.index))
+        fig.show()
         print('Training complete')
 
     def predict(self, X):
-        y = self.__forward_propagate(X)
-        return y
+        temp, _ = self.__forward_propagate(X.T, self.weights[0], self.weights[2], 'relu')
+        y, _ = self.__forward_propagate(temp, self.weights[1], self.weights[3], 'softmax')
+        return y.T
+
+    def score(self, target, output, score_func='rmse'):
+        if score_func == 'accuracy':
+            output = np.where(output > 0.5, 1, 0)
+            res = (output == target).mean()
+        if score_func == 'entropy':
+            log_likelihood = (-np.log(output.T[range(target.T.shape[0]), target.T]))
+            res = (np.sum(log_likelihood) / target.T.shape[0] / 10000 )
+        if score_func == 'rmse':
+            res = np.average((target - output) ** 2)
+        return res
+
 
 #%%
-from random import random
+from utils import load_data
 
 if __name__ == "__main__":
-    # create a dataset to train a network for the sum operation
-    items = np.array([[random()/2 for _ in range(2)] for _ in range(1000)])
-    targets = np.array([[i[0] + i[1]] for i in items])
-    print(items.shape)
-    print(targets.shape)
 
-    # create a Multilayer Perceptron with one hidden layer
-    mlp = MLP(2,[5], 1)
+    X, y = load_data()
 
-    # train network
-    mlp.fit(items, targets)
+    mlp = MLP()
 
-    # create dummy data
-    input = np.array([0.3, 0.1])
-    target = np.array([0.4])
+    mlp.fit(X, y)
 
-    # get a prediction
-    output = mlp.predict(input)
+    output = mlp.predict(X)
 
-    print()
-    print("Our network believes that {} + {} is equal to {}".format(input[0], input[1], output[0]))
+    rmse = mlp.score(y, output)
+    accuracy = mlp.score(y, output, score_func='accuracy')
+    loss_entropy = mlp.score(y, output, score_func='entropy')
+    print('Rmse: ', rmse)
+    print('Accuracy: ', accuracy)
+    print('Loss Entropy: ', loss_entropy)
 
 # %%

@@ -5,7 +5,6 @@ feedforward -> https://en.wikipedia.org/wiki/Feedforward_neural_network
 
 backpropagation
 
-
 https://kaifabi.github.io/2020/01/15/numpy_mlp.html
 
 -> 2 Easy Ways to Normalize data
@@ -28,3 +27,5 @@ simple MLP implementation
 
 
 https://github.com/musikalkemist/DeepLearningForAudioWithPython/blob/master/8-%20Training%20a%20neural%20network:%20Implementing%20back%20propagation%20from%20scratch/code/mlp.py
+
+https://medium.com/data-science-bootcamp/understand-the-softmax-function-in-minutes-f3a59641e86d
